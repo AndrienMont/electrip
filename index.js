@@ -12,7 +12,7 @@ app.get('/', function(req, res){
     res.sendFile(__dirname + '/index.html');
 });
 
-http.listen(process.env.port || 3000, function(){
+http.listen(process.env.port, function(){
     console.log('listening on *:3000');
 });
 
