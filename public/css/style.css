@@ -1,0 +1,23 @@
+#map { height: 750px; width : 750px;}
+
+.vehicleCard{
+    border : 1px solid black;
+    border-radius: 10px;
+    margin: auto;
+    margin-bottom: 5px;
+    padding: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    width: 60%;
+}
+
+.vehicleCard img {
+    width: 350px;
+    height:200px;
+    margin-right:10px;
+}
+
+.vehicleCard h2, .vehicleCard p {
+    margin: 0;
+}

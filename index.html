@@ -1,0 +1,266 @@
+<html>
+<head>
+    <title>Electrip</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <h1>Electrip</h1>
+
+    <h2>Find the best route for your electric car</h2>
+
+    <div id="info">
+        <form> <!-- action="/trip" method="post" -->
+            <label for="start">Start:</label>
+            <input type="text" id="start" name="start" placeholder="Start address">
+    
+            <label for="end">End:</label>
+            <input type="text" id="end" name="end" placeholder="End address">
+    
+            <label for="battery">Battery:</label>
+            <input type="number" id="battery" name="battery" placeholder="Battery level">
+    
+            <input type="submit" value="Submit" onclick="doSummary()">
+        </form>
+    
+        <p>Summary of your trip :</p>
+        <p id="depart">Origin : </p>
+        <p id="arrive">End : </p>
+        <p id="charge">Battery : 0 %</p>
+
+        <button onclick="getCoords()">Get the coordinates</button>
+        <p id="coordsD"> </p>
+        <br/>
+        <p id="coordsA"> </p>
+        <br/>
+
+        <button onclick="drawRoad()">Draw the road</button>
+        <button onclick="getBornes()">Get the bornes</button>
+
+    </div>
+    
+    <br/>
+
+    <div id="map"></div>
+
+
+    <div id="time">
+        <h1 id="trip">The trip time is estimated to 0 mins.</h1>
+        <!-- <button onclick="getTripTime()">Get the trip time</button> -->
+        <br/>
+        <br/>
+        <form>
+            <label for="distance">Distance:</label>
+            <input type="text" id="distance" name="distance" placeholder="Distance">
+    
+            <label for="vitesse">Speed:</label>
+            <input type="text" id="vitesse" name="vitesse" placeholder="Speed">
+    
+            <label for="points">Points:</label>
+            <input type="text" id="points" name="points" placeholder="Points">
+    
+            <input type="submit" value="Submit" onclick="getRealTime()">
+        </form>
+        <br/>
+        
+    </div>
+
+    <div id="vehiclesList">
+        <button onclick="getVehicles()">Get vehicles</button>
+        <!-- <p id="vehicles"></p> -->
+    </div>
+
+    <script>
+        function reverseCoords(tab){
+            var newTab = [];
+            for (var i = 0; i < tab.length; i++){
+                newTab.push([tab[i][1], tab[i][0]]);
+            }
+            return newTab;
+        }
+
+        var map = L.map('map').setView([45.584386, 5.909277], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var latlngs= [];
+
+        var dist = 0;
+        var timeETA = 0;
+        var spd = 0;
+
+        function drawRoad(){
+            const url = '/route/'+latD+'/'+longD+'/'+latA+'/'+longA+'/';
+
+            fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                jsonData = JSON.parse(data);
+                latlngs = jsonData.features[0].geometry.coordinates;
+                latlngs = reverseCoords(latlngs);
+                dist = jsonData.features[0].properties.summary.distance / 1000;
+                timeETA = jsonData.features[0].properties.summary.duration / 3600;
+                spd = dist / timeETA;
+                document.getElementById("vitesse").value = spd;
+                document.getElementById("distance").value = dist;
+                var polyline = L.polyline(latlngs, {color : 'red'}).addTo(map);
+                L.marker(latlngs[0]).addTo(map).bindPopup('Start');
+                L.marker(latlngs[latlngs.length-1]).addTo(map).bindPopup('End');
+                map.fitBounds(polyline.getBounds());
+            })
+            .catch(error => {
+                console.log(error);
+            });
+
+        }
+
+        var selectedChargeTripRange = null;
+
+        function getVehicles(){
+            fetch('/vehicles')
+            .then(response => response.text())
+            .then(data => {
+                // document.getElementById("vehicles").innerHTML = data;
+                jsonData = JSON.parse(data);
+                var vehiclesContainer = document.getElementById("vehiclesList");
+                jsonData.vehicleList.forEach(function(vehicle){
+                    var vehicleDiv = document.createElement("div");
+                    vehicleDiv.classList.add("vehicleCard");
+                    vehicleDiv.innerHTML = `
+                        <img src="${vehicle.media.image.url}" alt="${vehicle.naming.make} ${vehicle.naming.model}">
+                        <div>
+                            <h2>${vehicle.naming.make} ${vehicle.naming.model} ${vehicle.naming.version || ''}</h2>
+                            <p>Seats: ${vehicle.body.seats}</p>
+                            <p>Usable Battery: ${vehicle.battery.usable_kwh} kWh</p>
+                            <p>Chargetrip Range: ${vehicle.range.chargetrip_range.best} - ${vehicle.range.chargetrip_range.worst} miles</p>
+                            <p>Fast Charging Support: ${vehicle.routing.fast_charging_support ? 'Yes' : 'No'}</p>
+                        </div>
+                    `;
+                    vehicleDiv.addEventListener('click', function(){
+                        selectedChargeTripRange = (vehicle.range.chargetrip_range.best + vehicle.range.chargetrip_range.worst) / 2; 
+                        console.log(selectedChargeTripRange);
+                        resetSelection();
+                        vehicleDiv.style.backgroundColor = "#82b08f";
+                    });
+                    vehiclesContainer.appendChild(vehicleDiv);
+                })
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        }
+
+        function getBornes(){
+            fetch('/bornes/'+latD+'/'+longD+'/'+latA+'/'+longA+'/'+selectedChargeTripRange+'/')
+            .then(response => response.text())
+            .then(data =>{
+                console.log(data);
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        }
+
+        function resetSelection(){
+            var vehicleItems = document.querySelectorAll(".vehicleCard");
+            vehicleItems.forEach(function(vehicleItem){
+                vehicleItem.style.backgroundColor = "";
+            });
+        }
+
+        function getTripTime(){
+            fetch('/tripTime')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("trip").innerHTML = "The trip time is estimated to " + data + " mins.";
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        }
+
+        function doSummary(){
+            event.preventDefault();
+            document.getElementById("depart").innerHTML = "Origin : " + document.getElementById("start").value;
+            document.getElementById("arrive").innerHTML = "End : " + document.getElementById("end").value;
+            document.getElementById("charge").innerHTML = "Battery : " + document.getElementById("battery").value.toString() + " %";
+        }
+
+        function getRealTime(){
+            event.preventDefault();
+            const distance = document.getElementById("distance").value.toString();
+            const vitesse = document.getElementById("vitesse").value.toString();
+            const points = document.getElementById("points").value.toString();
+
+            const url = '/tripTime/'+distance+'/'+vitesse+'/'+points+'/';
+
+            fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("trip").innerHTML = "The trip time is estimated to " + data + " mins.";
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        }
+
+        var latD = 0;
+        var longD = 0;
+        var latA = 0;
+        var longA = 0;
+
+        function getCoords(){
+            const pos = document.getElementById("start").value.toString();
+
+            const url = '/coordinates/'+pos+'/';
+
+            fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                jsonData = JSON.parse(data);
+                const coordinates = jsonData.features[0].geometry.coordinates;
+                const latitude = coordinates[1];
+                const longitude = coordinates[0];
+
+                document.getElementById("coordsD").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
+
+                latD = latitude;
+                longD = longitude;
+            })
+            .catch(error => {
+                console.log(error);
+            });
+
+            const arr = document.getElementById("end").value.toString();
+
+            const url2 = '/coordinates/'+arr+'/';
+
+            fetch(url2)
+            .then(response => response.text())
+            .then(data => {
+                console.log(data);
+                jsonData = JSON.parse(data);
+                const coordinates = jsonData.features[0].geometry.coordinates;
+                const latitude = coordinates[1];
+                const longitude = coordinates[0];
+
+                document.getElementById("coordsA").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
+
+                latA = latitude;
+                longA = longitude;
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        }
+    </script>
+</body>
