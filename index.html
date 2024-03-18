@@ -7,6 +7,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+    <script src="fetchFunctions.js" defer></script>
+    <script src="utilityFunctions.js" defer></script>
+    <script src="mapFunctions.js" defer></script>
     
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -36,7 +39,7 @@
                         <input type="number" id="battery" name="battery" placeholder="Battery level">
                     </label>
             
-                    <input type="submit" value="Submit" onclick="doSummary()">
+                    <input type="submit" value="Submit" onclick="designTrip()">
                 </form>
             </div>
             <div class="buttons">
@@ -65,7 +68,7 @@
 
 
     <button onclick="drawRoad()">Draw the road</button>
-    <button onclick="getBornes()">Get the bornes</button>
+    <button onclick="designTrip()">Get the bornes</button>
     
     
     <br/>
@@ -102,13 +105,6 @@
     
 
     <script>
-        function reverseCoords(tab){
-            var newTab = [];
-            for (var i = 0; i < tab.length; i++){
-                newTab.push([tab[i][1], tab[i][0]]);
-            }
-            return newTab;
-        }
 
         var map = L.map('map').setView([45.584386, 5.909277], 13);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -122,121 +118,9 @@
         var timeETA = 0;
         var spd = 0;
 
-        var selectedChargeTripRange = null;
+        var selectedChargeTripRange = 500;
 
         var chargingStations = [];
-
-        function drawRoad(){
-            const url = '/route/'+latD+'/'+longD+'/'+latA+'/'+longA+'/';
-
-            fetch(url)
-            .then(response => response.text())
-            .then(data => {
-                jsonData = JSON.parse(data);
-                latlngs = jsonData.features[0].geometry.coordinates;
-                latlngs = reverseCoords(latlngs);
-                dist = jsonData.features[0].properties.summary.distance / 1000;
-                timeETA = jsonData.features[0].properties.summary.duration / 3600;
-                spd = dist / timeETA;
-                document.getElementById("vitesse").value = spd;
-                document.getElementById("distance").value = dist;
-                var polyline = L.polyline(latlngs, {color : 'red'}).addTo(map);
-                L.marker(latlngs[0]).addTo(map).bindPopup('Start');
-                L.marker(latlngs[latlngs.length-1]).addTo(map).bindPopup('End');
-                map.fitBounds(polyline.getBounds());
-            })
-            .catch(error => {
-                console.log(error);
-            });
-
-        }
-
-        
-
-        function getVehicles(){
-            fetch('/vehicles')
-            .then(response => response.text())
-            .then(data => {
-                // document.getElementById("vehicles").innerHTML = data;
-                jsonData = JSON.parse(data);
-                var vehiclesContainer = document.getElementById("vehiclesList");
-                jsonData.vehicleList.forEach(function(vehicle){
-                    var vehicleDiv = document.createElement("div");
-                    vehicleDiv.classList.add("vehicleCard");
-                    vehicleDiv.innerHTML = `
-                        <img src="${vehicle.media.image.url}" alt="${vehicle.naming.make} ${vehicle.naming.model}">
-                        <div>
-                            <h2>${vehicle.naming.make} ${vehicle.naming.model} ${vehicle.naming.version || ''}</h2>
-                            <p>Seats: ${vehicle.body.seats}</p>
-                            <p>Usable Battery: ${vehicle.battery.usable_kwh} kWh</p>
-                            <p>Chargetrip Range: ${vehicle.range.chargetrip_range.best} - ${vehicle.range.chargetrip_range.worst} miles</p>
-                            <p>Fast Charging Support: ${vehicle.routing.fast_charging_support ? 'Yes' : 'No'}</p>
-                        </div>
-                    `;
-                    vehicleDiv.addEventListener('click', function(){
-                        selectedChargeTripRange = (vehicle.range.chargetrip_range.best + vehicle.range.chargetrip_range.worst) / 2; 
-                        console.log(selectedChargeTripRange);
-                        resetSelection();
-                        vehicleDiv.style.backgroundColor = "#82b08f";
-                    });
-                    vehiclesContainer.appendChild(vehicleDiv);
-                })
-            })
-            .catch(error => {
-                console.log(error);
-            });
-        }
-
-        function getDistance(lat1, lon1, lat2, lon2){
-            const R = 6371;
-            const dLat = (lat2-lat1) * Math.PI / 180;
-            const dLon = (lon2-lon1) * Math.PI / 180;
-            const a = 0.5 - Math.cos(dlat) / 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * (1 - Math.cos(dLon)) / 2;
-            return R * 2 * Math.asin(Math.sqrt(a));
-        }
-
-        function findChargingStations(road, autonomy, chargingStations) {
-            const result = [];
-            for (let i = 0; i < road.length - 1; i++) {
-                const startPoint = road[i];
-                const endPoint = road[i + 1];
-                const segmentDistance = getDistance(startPoint[0], startPoint[1], endPoint[0], endPoint[1]);
-                for (const station of chargingStations) {
-                    const distanceToStart = getDistance(startPoint[0], startPoint[1], station.geo_point_borne.lat, station.geo_point_borne.lon);
-                    const distanceToEnd = getDistance(endPoint[0], endPoint[1], station.geo_point_borne.lat, station.geo_point_borne.lon);
-                    if (distanceToStart <= autonomy || distanceToEnd <= autonomy) {
-                        result.push(station);
-                    } else {
-                        const projectedPoint = projectPointOnSegment([station.geo_point_borne.lat, station.geo_point_borne.lon], startPoint, endPoint);
-                        const projectedDistance = getDistance(projectedPoint[0], projectedPoint[1], station.geo_point_borne.lat, station.geo_point_borne.lon);
-                        if (projectedDistance <= autonomy) {
-                            result.push(station);
-                        }
-                    }
-                }
-            }
-            return result;
-        }
-
-        function getBornes(){
-            fetch('/bornesData')
-            .then(response => response.text())
-            .then(data =>{
-                console.log(data);
-
-                return fetch("/findChargingStations");
-            })
-            .then(response => response.text())
-            .then(data => {
-                jsonData = JSON.parse(data);
-                chargingStations = findChargingStations(latlngs, selectedChargeTripRange, jsonData);
-                console.log(chargingStations);
-            })
-            .catch(error => {
-                console.error("Error fetching charging stations: ", error);
-            });
-            
-        }
 
         function displayBornes(bornes){
             var bornesDiv = document.getElementById("chargingStations");
@@ -255,13 +139,39 @@
             }
         }
 
+        function designTrip(){
+            event.preventDefault();
+            // try {
+            //     await getCoords();
+            //     await drawRoad();
+            //     var spd = document.getElementById("vitesse").value;
+            //     console.log("Speed : " + spd);
+            //     var distance = document.getElementById("distance").value;
+            //     console.log("Distance : " + distance);
+            // }catch(error){
+            //     console.log(error);
+            // }
+            
+            getCoords()
+            .then(drawRoad)
+            .then(getRealTime)
+            .catch(error => {
+                console.log(error);
+            });
+
+            // latlngs = drawRoad();
+            // console.log("Latlngs :" + latlngs);
+            // getBornes(latlngs, selectedChargeTripRange);
+            //the idea would be to redraw a road with the bornes as markers and intermediate points
+        }
+
         function resetPage(){
             document.getElementById("trip").innerHTML = "The trip time is estimated to 0 mins.";
             document.getElementById("vehiclesList").innerHTML = "";
             document.getElementById("chargingStations").innerHTML = "";
-            document.getElementById("start").innerHTML = "";
-            document.getElementById("end").innerHTML = "";
-            document.getElementById("battery").innerHTML = "";
+            document.getElementById("start").value = "";
+            document.getElementById("end").value = "";
+            document.getElementById("battery").value = "";
             document.getElementById("depart").innerHTML = "Origin : ";
             document.getElementById("arrive").innerHTML = "End : ";
             document.getElementById("charge").innerHTML = "Battery : 0 %";
@@ -270,23 +180,25 @@
             timeETA = 0;
             spd = 0;
             selectedChargeTripRange = null;
+            resetMap();
+        }
+
+        function resetMap(){
+            map.eachLayer(function (layer) {
+                if(layer instanceof L.Marker){
+                    map.removeLayer(layer);
+                }
+                if(layer instanceof L.Polyline){
+                    map.removeLayer(layer);
+                }
+            });
+            map.setView([45.584386, 5.909277], 13);
         }
 
         function resetSelection(){
             var vehicleItems = document.querySelectorAll(".vehicleCard");
             vehicleItems.forEach(function(vehicleItem){
                 vehicleItem.style.backgroundColor = "";
-            });
-        }
-
-        function getTripTime(){
-            fetch('/tripTime')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById("trip").innerHTML = "The trip time is estimated to " + data + " mins.";
-            })
-            .catch(error => {
-                console.log(error);
             });
         }
 
@@ -301,7 +213,8 @@
             event.preventDefault();
             const distance = document.getElementById("distance").value.toString();
             const vitesse = document.getElementById("vitesse").value.toString();
-            const points = document.getElementById("points").value.toString();
+            // const points = document.getElementById("points").value.toString();
+            const points= "0";
 
             const url = '/tripTime/'+distance+'/'+vitesse+'/'+points+'/';
 
@@ -320,49 +233,6 @@
         var latA = 0;
         var longA = 0;
 
-        function getCoords(){
-            const pos = document.getElementById("start").value.toString();
-
-            const url = '/coordinates/'+pos+'/';
-
-            fetch(url)
-            .then(response => response.text())
-            .then(data => {
-                jsonData = JSON.parse(data);
-                const coordinates = jsonData.features[0].geometry.coordinates;
-                const latitude = coordinates[1];
-                const longitude = coordinates[0];
-
-                document.getElementById("coordsD").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
-
-                latD = latitude;
-                longD = longitude;
-            })
-            .catch(error => {
-                console.log(error);
-            });
-
-            const arr = document.getElementById("end").value.toString();
-
-            const url2 = '/coordinates/'+arr+'/';
-
-            fetch(url2)
-            .then(response => response.text())
-            .then(data => {
-                console.log(data);
-                jsonData = JSON.parse(data);
-                const coordinates = jsonData.features[0].geometry.coordinates;
-                const latitude = coordinates[1];
-                const longitude = coordinates[0];
-
-                document.getElementById("coordsA").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
-
-                latA = latitude;
-                longA = longitude;
-            })
-            .catch(error => {
-                console.log(error);
-            });
-        }
+        
     </script>
 </body>
