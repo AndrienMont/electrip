@@ -12,23 +12,44 @@
 </head>
 <body>
 
-    <h1>Electrip</h1>
+    <div class="head">
+        <h1>Electrip</h1>
+    </div>
 
-    <h2>Find the best route for your electric car</h2>
+    <h2 style="text-align: center;">Find the best route for your electric car</h2>
+    
 
-    <div id="info">
-        <form> <!-- action="/trip" method="post" -->
-            <label for="start">Start:</label>
-            <input type="text" id="start" name="start" placeholder="Start address">
+    <div class="center">
+        <div id="map"></div>
+        <div class="input">
+            <div id="info">
+                <form id="infoForm">
+                    <label for="start">Start:
+                        <input type="text" id="start" name="start" placeholder="Start address">
+                    </label>
+            
+                    <label for="end">End:
+                        <input type="text" id="end" name="end" placeholder="End address">
+                    </label>
+            
+                    <label for="battery">Battery:
+                        <input type="number" id="battery" name="battery" placeholder="Battery level">
+                    </label>
+            
+                    <input type="submit" value="Submit" onclick="doSummary()">
+                </form>
+            </div>
+            <div class="buttons">
+                <button onclick="getVehicles()" class="center-button">Display the available vehicles</button>
+                <button onclick="resetPage()">Choose another trip</button>
+            </div>
+            
+            <div id="vehiclesList">
+            </div>
+        </div>
+    </div>
+
     
-            <label for="end">End:</label>
-            <input type="text" id="end" name="end" placeholder="End address">
-    
-            <label for="battery">Battery:</label>
-            <input type="number" id="battery" name="battery" placeholder="Battery level">
-    
-            <input type="submit" value="Submit" onclick="doSummary()">
-        </form>
     
         <p>Summary of your trip :</p>
         <p id="depart">Origin : </p>
@@ -41,14 +62,19 @@
         <p id="coordsA"> </p>
         <br/>
 
-        <button onclick="drawRoad()">Draw the road</button>
-        <button onclick="getBornes()">Get the bornes</button>
 
-    </div>
+
+    <button onclick="drawRoad()">Draw the road</button>
+    <button onclick="getBornes()">Get the bornes</button>
+    
     
     <br/>
 
-    <div id="map"></div>
+    <div id="chargingStations"></div>
+
+    <br/>
+
+    
 
 
     <div id="time">
@@ -72,10 +98,8 @@
         
     </div>
 
-    <div id="vehiclesList">
-        <button onclick="getVehicles()">Get vehicles</button>
-        <!-- <p id="vehicles"></p> -->
-    </div>
+    
+    
 
     <script>
         function reverseCoords(tab){
@@ -97,6 +121,10 @@
         var dist = 0;
         var timeETA = 0;
         var spd = 0;
+
+        var selectedChargeTripRange = null;
+
+        var chargingStations = [];
 
         function drawRoad(){
             const url = '/route/'+latD+'/'+longD+'/'+latA+'/'+longA+'/';
@@ -123,7 +151,7 @@
 
         }
 
-        var selectedChargeTripRange = null;
+        
 
         function getVehicles(){
             fetch('/vehicles')
@@ -159,15 +187,89 @@
             });
         }
 
+        function getDistance(lat1, lon1, lat2, lon2){
+            const R = 6371;
+            const dLat = (lat2-lat1) * Math.PI / 180;
+            const dLon = (lon2-lon1) * Math.PI / 180;
+            const a = 0.5 - Math.cos(dlat) / 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * (1 - Math.cos(dLon)) / 2;
+            return R * 2 * Math.asin(Math.sqrt(a));
+        }
+
+        function findChargingStations(road, autonomy, chargingStations) {
+            const result = [];
+            for (let i = 0; i < road.length - 1; i++) {
+                const startPoint = road[i];
+                const endPoint = road[i + 1];
+                const segmentDistance = getDistance(startPoint[0], startPoint[1], endPoint[0], endPoint[1]);
+                for (const station of chargingStations) {
+                    const distanceToStart = getDistance(startPoint[0], startPoint[1], station.geo_point_borne.lat, station.geo_point_borne.lon);
+                    const distanceToEnd = getDistance(endPoint[0], endPoint[1], station.geo_point_borne.lat, station.geo_point_borne.lon);
+                    if (distanceToStart <= autonomy || distanceToEnd <= autonomy) {
+                        result.push(station);
+                    } else {
+                        const projectedPoint = projectPointOnSegment([station.geo_point_borne.lat, station.geo_point_borne.lon], startPoint, endPoint);
+                        const projectedDistance = getDistance(projectedPoint[0], projectedPoint[1], station.geo_point_borne.lat, station.geo_point_borne.lon);
+                        if (projectedDistance <= autonomy) {
+                            result.push(station);
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
         function getBornes(){
-            fetch('/bornes/'+latD+'/'+longD+'/'+latA+'/'+longA+'/'+selectedChargeTripRange+'/')
+            fetch('/bornesData')
             .then(response => response.text())
             .then(data =>{
                 console.log(data);
+
+                return fetch("/findChargingStations");
+            })
+            .then(response => response.text())
+            .then(data => {
+                jsonData = JSON.parse(data);
+                chargingStations = findChargingStations(latlngs, selectedChargeTripRange, jsonData);
+                console.log(chargingStations);
             })
             .catch(error => {
-                console.log(error);
+                console.error("Error fetching charging stations: ", error);
             });
+            
+        }
+
+        function displayBornes(bornes){
+            var bornesDiv = document.getElementById("chargingStations");
+            bornesDiv.innerHTML = "";
+
+            if(bornes.length === 0){
+                bornesDiv.innerHTML = "<p>No charging stations found</p>";
+            }else{
+                const ul = document.createElement("ul");
+                bornes.forEach(station => {
+                    const li = document.createElement("li");
+                    li.textContent = `${station.n_station} - ${station.ad_station}`;
+                    ul.appendChild(li);
+                });
+                bornesDiv.appendChild(ul);
+            }
+        }
+
+        function resetPage(){
+            document.getElementById("trip").innerHTML = "The trip time is estimated to 0 mins.";
+            document.getElementById("vehiclesList").innerHTML = "";
+            document.getElementById("chargingStations").innerHTML = "";
+            document.getElementById("start").innerHTML = "";
+            document.getElementById("end").innerHTML = "";
+            document.getElementById("battery").innerHTML = "";
+            document.getElementById("depart").innerHTML = "Origin : ";
+            document.getElementById("arrive").innerHTML = "End : ";
+            document.getElementById("charge").innerHTML = "Battery : 0 %";
+            latlngs = [];
+            dist = 0;
+            timeETA = 0;
+            spd = 0;
+            selectedChargeTripRange = null;
         }
 
         function resetSelection(){

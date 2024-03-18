@@ -4,6 +4,7 @@ var http = require('http').Server(app);
 var soap = require('soap');
 var https = require('https');
 var axios = require('axios');
+var fs = require('fs');
 const { start } = require('repl');
 
 app.use(express.static(__dirname + '/public'));
@@ -12,13 +13,29 @@ app.get('/', function(req, res){
     res.sendFile(__dirname + '/index.html');
 });
 
-http.listen(process.env.port, function(){
+http.listen(3000, function(){
     console.log('listening on *:3000');
 });
 
 var tripTime = 0;
 
 const url = 'http://127.0.0.1:8080/?wsdl';
+
+function readJSONFromFile(filePath){
+    try {
+        const data = fs.readFileSync(filePath, 'utf8');
+        return JSON.parse(data);
+    }catch(error){
+        console.error('Error reading JSON file: ',error.message);
+        return null;
+    }
+}
+
+app.get('/findChargingStations', function(req,res){
+    const chargingStations = readJSONFromFile('bornes.json');
+
+    res.status(200).send(chargingStations);
+})
 
 app.get('/tripTime', function(req, res){
     res.status(200).send(tripTime.toString());
@@ -49,29 +66,22 @@ app.get('/tripTime/:distance/:vitesse/:points', function(req, res){
 
 });
 
-app.get('/bornes/:startlat/:startlong/:endLat/:endLong/:distance', async(req, res) => {
-    const startLat = req.params.startlat;
-    const startLong = req.params.startlong;
-    const endLat = req.params.endLat;
-    const endLong = req.params.endLong;
 
-    const lat = startLat + "," + endLat;
-    const long = startLong + "," + endLong;
-    const dist = req.params.distance;
-    const point = "POINT(" + lat + "," + long + ")";
 
-    const url = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/bornes-irve/records?limit=2&where=(distance('geo_point_borne', geom" + encodeURIComponent(point) + ", " + encodeURIComponent(dist) +"m))"
-
+app.get('/bornesData', async(req,res) => {
     try {
+        const url = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/bornes-irve/exports/json?lang=fr&timezone=Europe%2FBerlin";
+
         const response = await axios.get(url);
 
-        const data = response.data;
-        res.json(data);
-    }catch(err){
-        console.error(err);
+        fs.writeFileSync('bornes.json', JSON.stringify(response.data));
+
+        res.send('JSON file downloaded successfully.');
+    }catch(error){
+        console.error('Error downloading JSON file: ',error.message);
         res.status(500).send("Error while fecthing the bornes list.")
     }
-});
+})
 
 //use GeocodeAutocompleteService for coordinates
 app.get('/coordinates/:address', function(req, res){
@@ -156,7 +166,7 @@ app.get('/vehicles', async (req, res) => {
 
     const graphQuery = `
     query {
-        vehicleList (size : 15){
+        vehicleList (size : 20){
             naming {
                 make
                 model

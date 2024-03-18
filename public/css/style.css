@@ -1,4 +1,9 @@
-#map { height: 750px; width : 750px;}
+#map { height: 600px; width : 600px;}
+
+body{
+    margin: 0;
+    padding: 0;
+}
 
 .vehicleCard{
     border : 1px solid black;
@@ -9,7 +14,12 @@
     cursor: pointer;
     display: flex;
     align-items: center;
-    width: 60%;
+    width: 75%;
+}
+
+.vehicleCard:hover{
+    background-color: #dadada;
+    transform: scale(1.02);
 }
 
 .vehicleCard img {
@@ -20,4 +30,47 @@
 
 .vehicleCard h2, .vehicleCard p {
     margin: 0;
+}
+
+#vehiclesList {
+    height: 450px;
+    overflow-y: scroll;
+}
+
+.head{
+    text-align: center;
+    background-color: purple;
+    color: white;
+}
+
+.center {
+    display: flex;
+    flex-direction: row;
+    padding: 30px;
+    justify-content: space-evenly;
+    border: 1px solid black;
+    border-radius: 10px;
+}
+
+#infoForm{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.input label, input {
+    display: block;
+}
+
+.input label{
+    margin-bottom: 10px;
+}
+
+.buttons{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+    width: 100%;
+    margin-bottom: 5px;
+    padding: 10px;
 }
