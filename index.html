@@ -65,51 +65,6 @@
     </div>
         
 
-        <!-- <button onclick="getCoords()">Get the coordinates</button> -->
-        <!-- <p id="coordsD"> </p>
-        <br/>
-        <p id="coordsA"> </p>
-        <br/> -->
-
-
-
-    
-    <!-- <button onclick="designTrip()">Get the bornes</button> -->
-    
-    
-    <br/>
-
-    <div id="chargingStations"></div>
-
-    <br/>
-
-    
-
-
-    <!-- <div id="time">
-        
-        <button onclick="getTripTime()">Get the trip time</button>
-        <br/>
-        <br/>
-        <form>
-            <label for="distance">Distance:</label>
-            <input type="text" id="distance" name="distance" placeholder="Distance">
-    
-            <label for="vitesse">Speed:</label>
-            <input type="text" id="vitesse" name="vitesse" placeholder="Speed">
-    
-            <label for="points">Points:</label>
-            <input type="text" id="points" name="points" placeholder="Points">
-    
-            <input type="submit" value="Submit" onclick="getRealTime()">
-        </form>
-        <br/>
-        
-    </div> -->
-
-    
-    
-
     <script>
 
         var map = L.map('map').setView([45.584386, 5.909277], 13);
@@ -154,13 +109,12 @@
         function resetPage(){
             document.getElementById("trip").innerHTML = "The trip time is estimated to 0 mins.";
             document.getElementById("vehiclesList").innerHTML = "";
-            document.getElementById("chargingStations").innerHTML = "";
             document.getElementById("start").value = "";
             document.getElementById("end").value = "";
-            document.getElementById("battery").value = "";
-            document.getElementById("depart").innerHTML = "Origin : ";
-            document.getElementById("arrive").innerHTML = "End : ";
-            document.getElementById("charge").innerHTML = "Battery : 0 %";
+            document.getElementById("depart").innerHTML = "Departure : ";
+            document.getElementById("arrive").innerHTML = "Arrival : ";
+            document.getElementById("distance").innerHTML = "Distance : 0 km";
+            document.getElementById("vitesse").innerHTML = "Average speed : 0 km/h";
             latlngs = [];
             dist = 0;
             timeETA = 0;
@@ -204,11 +158,6 @@
             const vitValue = vitesse.match(/\d+\.\d+/);
             const vitesseFloat = parseInt(vitValue[0]);
 
-
-
-            // console.log(distFloat);
-            // console.log(vitesseFloat);
-            // const points = document.getElementById("points").value.toString();
             const points= "0";
 
             const url = '/tripTime/'+distFloat+'/'+vitesseFloat+'/'+points+'/';

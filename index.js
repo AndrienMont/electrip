@@ -86,11 +86,13 @@ app.get('/bornesData', async(req,res) => {
 //use GeocodeAutocompleteService for coordinates
 app.get('/coordinates/:address', function(req, res){
     const address = req.params.address;
+
+    const apiKey = process.env.API_OPEN_ROUTE;
     
     const options = {
         method: "GET",
         hostname: "api.openrouteservice.org",
-        path: "/geocode/autocomplete?api_key=5b3ce3597851110001cf6248d3e9578fa3f8437bb98495a777283f1d&text="+address,
+        path: "/geocode/autocomplete?api_key="+ apiKey+"&text="+address,
         headers: {
             "Accept": "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8"
         }
@@ -128,10 +130,12 @@ app.get('/route/:startLat/:startLong/:endLat/:endLong', function(req, res){
     const start = startLong+","+startLat;
     const end = endLong+","+endLat;
 
+    const apiKey = process.env.API_OPEN_ROUTE;
+
     const options = {
         method: "GET",
         hostname: "api.openrouteservice.org",
-        path: "/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248d3e9578fa3f8437bb98495a777283f1d&start="+start+"&end="+end,
+        path: "/v2/directions/driving-car?api_key="+ apiKey + "&start="+start+"&end="+end,
         headers: {
             "Accept": "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8"
         }
@@ -204,9 +208,12 @@ app.get('/vehicles', async (req, res) => {
     }
     `;
 
+    const x_client = process.env.X_CLIENT_ID;
+    const x_app = process.env.X_APP_ID;
+
     const headers = {
-        'x-client-id' : '65aa740d0117350bae37ac78',
-        'x-app-id' : '65aa740d0117350bae37ac7a'
+        'x-client-id' : x_client,
+        'x-app-id' : x_app
     };
 
     try {

@@ -2,7 +2,6 @@ window.getVehicles = function(){
     fetch('/vehicles')
     .then(response => response.text())
     .then(data => {
-        // document.getElementById("vehicles").innerHTML = data;
         jsonData = JSON.parse(data);
         var vehiclesContainer = document.getElementById("vehiclesList");
         jsonData.vehicleList.forEach(function(vehicle){
@@ -70,8 +69,6 @@ window.getCoords = function(){
         const latitude = coordinates[1];
         const longitude = coordinates[0];
 
-        // document.getElementById("coordsD").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
-
         latD = latitude;
         longD = longitude;
     })
@@ -93,8 +90,6 @@ window.getCoords = function(){
         const coordinates = jsonData.features[0].geometry.coordinates;
         const latitude = coordinates[1];
         const longitude = coordinates[0];
-
-        // document.getElementById("coordsA").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
 
         latA = latitude;
         longA = longitude;
