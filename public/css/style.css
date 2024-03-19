@@ -74,3 +74,32 @@ body{
     margin-bottom: 5px;
     padding: 10px;
 }
+
+.summary {
+    border: 1px solid black;
+    border-radius: 5px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    margin-bottom: 20px;
+    margin-top : 5px;
+}
+
+.summary h1 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.summary p {
+    font-size: 1em;
+    margin: 5px 0;
+    text-align:center;
+}
+
+#distance, #vitesse {
+    font-style: italic;
+}
+
+#trip{
+    font-weight: bold;
+}

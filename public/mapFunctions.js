@@ -13,8 +13,8 @@ window.drawRoad = function(){
         dist = jsonData.features[0].properties.summary.distance / 1000;
         timeETA = jsonData.features[0].properties.summary.duration / 3600;
         spd = dist / timeETA;
-        document.getElementById("vitesse").value = spd;
-        document.getElementById("distance").value = dist;
+        document.getElementById("vitesse").innerHTML = "Avergae speed : " + spd.toFixed(2) + " km/h";
+        document.getElementById("distance").innerHTML = "Distance : " + dist.toFixed(2) + " km";
         var polyline = L.polyline(latlngs, {color : 'red'}).addTo(map);
         L.marker(latlngs[0]).addTo(map).bindPopup('Start');
         L.marker(latlngs[latlngs.length-1]).addTo(map).bindPopup('End');

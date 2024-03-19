@@ -58,6 +58,8 @@ window.getBornes = function(latlngs, selectedChargeTripRange){
 window.getCoords = function(){
     const pos = document.getElementById("start").value.toString();
 
+    document.getElementById("depart").innerHTML = "Departure : " + pos;
+
     const url = '/coordinates/'+pos+'/';
 
     fetch(url)
@@ -68,7 +70,7 @@ window.getCoords = function(){
         const latitude = coordinates[1];
         const longitude = coordinates[0];
 
-        document.getElementById("coordsD").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
+        // document.getElementById("coordsD").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
 
         latD = latitude;
         longD = longitude;
@@ -78,6 +80,8 @@ window.getCoords = function(){
     });
 
     const arr = document.getElementById("end").value.toString();
+
+    document.getElementById("arrive").innerHTML = "Arrival : " + arr;
 
     const url2 = '/coordinates/'+arr+'/';
 
@@ -90,7 +94,7 @@ window.getCoords = function(){
         const latitude = coordinates[1];
         const longitude = coordinates[0];
 
-        document.getElementById("coordsA").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
+        // document.getElementById("coordsA").innerHTML = "Latitude : " + latitude.toString() + " Longitude : " + longitude.toString();
 
         latA = latitude;
         longA = longitude;

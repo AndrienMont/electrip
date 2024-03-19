@@ -35,15 +35,17 @@
                         <input type="text" id="end" name="end" placeholder="End address">
                     </label>
             
-                    <label for="battery">Battery:
+                    <!-- <label for="battery">Battery:
                         <input type="number" id="battery" name="battery" placeholder="Battery level">
-                    </label>
+                    </label> -->
             
                     <input type="submit" value="Submit" onclick="designTrip()">
                 </form>
             </div>
             <div class="buttons">
                 <button onclick="getVehicles()" class="center-button">Display the available vehicles</button>
+                <button onclick="drawRoad()">Draw the road</button>
+                <button onclick="getRealTime()">Get the trip time</button>
                 <button onclick="resetPage()">Choose another trip</button>
             </div>
             
@@ -53,22 +55,26 @@
     </div>
 
     
-    
-        <p>Summary of your trip :</p>
-        <p id="depart">Origin : </p>
-        <p id="arrive">End : </p>
-        <p id="charge">Battery : 0 %</p>
+    <div class="summary">
+        <h1>Summary of your trip :</h1>
+        <p id="depart">Departure : </p>
+        <p id="arrive">Arrival : </p>
+        <p id="distance">Distance : 0 km</p>
+        <p id="vitesse">Average speed : 0 km/h</p>
+        <p id="trip">The trip time is estimated to 0 mins.</p>
+    </div>
+        
 
-        <button onclick="getCoords()">Get the coordinates</button>
-        <p id="coordsD"> </p>
+        <!-- <button onclick="getCoords()">Get the coordinates</button> -->
+        <!-- <p id="coordsD"> </p>
         <br/>
         <p id="coordsA"> </p>
-        <br/>
+        <br/> -->
 
 
 
-    <button onclick="drawRoad()">Draw the road</button>
-    <button onclick="designTrip()">Get the bornes</button>
+    
+    <!-- <button onclick="designTrip()">Get the bornes</button> -->
     
     
     <br/>
@@ -80,9 +86,9 @@
     
 
 
-    <div id="time">
-        <h1 id="trip">The trip time is estimated to 0 mins.</h1>
-        <!-- <button onclick="getTripTime()">Get the trip time</button> -->
+    <!-- <div id="time">
+        
+        <button onclick="getTripTime()">Get the trip time</button>
         <br/>
         <br/>
         <form>
@@ -99,7 +105,7 @@
         </form>
         <br/>
         
-    </div>
+    </div> -->
 
     
     
@@ -141,28 +147,8 @@
 
         function designTrip(){
             event.preventDefault();
-            // try {
-            //     await getCoords();
-            //     await drawRoad();
-            //     var spd = document.getElementById("vitesse").value;
-            //     console.log("Speed : " + spd);
-            //     var distance = document.getElementById("distance").value;
-            //     console.log("Distance : " + distance);
-            // }catch(error){
-            //     console.log(error);
-            // }
             
             getCoords()
-            .then(drawRoad)
-            .then(getRealTime)
-            .catch(error => {
-                console.log(error);
-            });
-
-            // latlngs = drawRoad();
-            // console.log("Latlngs :" + latlngs);
-            // getBornes(latlngs, selectedChargeTripRange);
-            //the idea would be to redraw a road with the bornes as markers and intermediate points
         }
 
         function resetPage(){
@@ -211,12 +197,21 @@
 
         function getRealTime(){
             event.preventDefault();
-            const distance = document.getElementById("distance").value.toString();
-            const vitesse = document.getElementById("vitesse").value.toString();
+            const distance = document.getElementById("distance").textContent;
+            const distValue = distance.match(/\d+\.\d+/);
+            const distFloat = parseInt(distValue[0]);
+            const vitesse = document.getElementById("vitesse").textContent;
+            const vitValue = vitesse.match(/\d+\.\d+/);
+            const vitesseFloat = parseInt(vitValue[0]);
+
+
+
+            // console.log(distFloat);
+            // console.log(vitesseFloat);
             // const points = document.getElementById("points").value.toString();
             const points= "0";
 
-            const url = '/tripTime/'+distance+'/'+vitesse+'/'+points+'/';
+            const url = '/tripTime/'+distFloat+'/'+vitesseFloat+'/'+points+'/';
 
             fetch(url)
             .then(response => response.text())
